@@ -1,0 +1,26 @@
+{
+  "name": "frontend-digest-bot",
+  "version": "0.1.0",
+  "description": "Personal Telegram bot that finds Frontend articles and sends AI summaries in Russian",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
+    "grammy": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
