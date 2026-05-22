@@ -27,4 +27,5 @@ export const config = {
   adminTelegramId: requiredInt("ADMIN_TELEGRAM_ID"),
   jinaApiKey: required("JINA_API_KEY"),
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  xaiApiKey: process.env.XAI_API_KEY ?? "",
 } as const;
