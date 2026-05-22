@@ -5,6 +5,7 @@ import { parseArticle } from "../services/parser.js";
 import { summarizeArticle } from "../services/ai.js";
 import { addUrl, hasUrl } from "../database/jsonStore.js";
 import { FIND_ARTICLE_BUTTON, mainKeyboard } from "./keyboards.js";
+import { escapeHtml, htmlToPlain, renderSummary } from "./format.js";
 
 const TOPICS = [
   "Vite performance",
@@ -97,37 +98,41 @@ async function findHandler(ctx: Context): Promise<void> {
     return;
   }
 
-  const caption = buildCaption(article.title, summary, article.url);
+  // Подробная выжимка не помещается в подпись к фото (лимит 1024),
+  // поэтому фото идёт с короткой подписью, а сам пересказ — отдельными
+  // сообщениями (лимит 4096 на сообщение).
+  const photoCaption = buildPhotoCaption(article.title, article.url);
 
   try {
     if (article.imageUrl) {
       await ctx.replyWithPhoto(article.imageUrl, {
-        caption,
+        caption: photoCaption,
         parse_mode: "HTML",
       });
     } else {
-      await ctx.reply(caption, { parse_mode: "HTML" });
+      await ctx.reply(photoCaption, { parse_mode: "HTML" });
     }
   } catch {
     // Картинка может оказаться битой/слишком большой — отправим текстом
-    await ctx.reply(caption, { parse_mode: "HTML" });
+    await ctx.reply(photoCaption, { parse_mode: "HTML" });
+  }
+
+  const messages = renderSummary(summary);
+  for (const message of messages) {
+    try {
+      await ctx.reply(message, { parse_mode: "HTML" });
+    } catch {
+      // Если Telegram отверг разметку — отправляем без неё
+      await ctx.reply(htmlToPlain(message));
+    }
   }
 
   await addUrl(article.url);
 }
 
-function buildCaption(title: string, summary: string, url: string): string {
-  const safeSummary = mdBoldToHtml(escapeHtml(summary));
-  const text = `<b>${escapeHtml(title)}</b>\n\n${safeSummary}\n\n<a href="${url}">Читать оригинал</a>`;
-  return text.length > TG_CAPTION_LIMIT
-    ? text.slice(0, TG_CAPTION_LIMIT - 1) + "…"
-    : text;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function mdBoldToHtml(s: string): string {
-  return s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+function buildPhotoCaption(title: string, url: string): string {
+  const caption = `<b>${escapeHtml(title)}</b>\n\n<a href="${escapeHtml(url)}">Читать оригинал →</a>`;
+  return caption.length > TG_CAPTION_LIMIT
+    ? caption.slice(0, TG_CAPTION_LIMIT - 1) + "…"
+    : caption;
 }
