@@ -1,11 +1,7 @@
-// Генерация пересказа через Grok (xAI). API совместимо с форматом
-// chat/completions от OpenAI, поэтому обходимся обычным fetch без SDK.
-
 const ENDPOINT = "https://api.x.ai/v1/chat/completions";
 const MODEL_NAME = "grok-4-fast-reasoning";
 const TIMEOUT_MS = 60_000;
 
-/** Генерация пересказа через Grok по готовому промпту. */
 export async function generateWithGrok(prompt: string): Promise<string> {
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {

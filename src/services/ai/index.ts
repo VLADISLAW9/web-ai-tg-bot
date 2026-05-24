@@ -1,21 +1,14 @@
-// Единая точка входа в ИИ-слой: выбирает провайдера и возвращает пересказ.
-
 import { buildPrompt, clampSummary } from "./prompt.js";
 import { generateWithGemini } from "./gemini.js";
 import { generateWithGrok } from "./grok.js";
 
 export type AiProvider = "gemini" | "grok";
 
-/** Человекочитаемые названия провайдеров — для сообщений в чате. */
 export const PROVIDER_LABELS: Record<AiProvider, string> = {
   gemini: "Gemini",
   grok: "Grok",
 };
 
-/**
- * Делает пересказ статьи выбранной моделью.
- * Промпт и подготовка текста — общие, различается только вызов API.
- */
 export async function summarizeArticle(
   provider: AiProvider,
   title: string,

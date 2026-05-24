@@ -1,10 +1,4 @@
-// Общий промпт и подготовка текста статьи — одинаковы для всех моделей.
-// Конкретный провайдер (Gemini, Grok) получает уже готовый prompt.
-
-// Сколько символов статьи отдаём модели — больше контекста, лучше пересказ.
 export const MAX_INPUT_CHARS = 32_000;
-// Верхняя граница пересказа. Сам по себе он разобьётся на несколько сообщений
-// в Telegram, поэтому жёсткого «обрезания по шаблону» больше нет.
 export const MAX_SUMMARY_CHARS = 7_000;
 
 const PROMPT_TEMPLATE = `Ты — опытный фронтенд-разработчик и редактор технического дайджеста. Тебе прислали статью. Сделай по ней ёмкий, но самодостаточный пересказ на русском языке: такой, чтобы, прочитав ТОЛЬКО его, человек понял главную суть статьи и не нуждался в открытии оригинала.
@@ -23,7 +17,6 @@ const PROMPT_TEMPLATE = `Ты — опытный фронтенд-разрабо
 Текст статьи:
 {{CONTENT}}`;
 
-/** Собирает готовый промпт: подставляет заголовок и обрезанный текст статьи. */
 export function buildPrompt(title: string, content: string): string {
   const trimmedContent =
     content.length > MAX_INPUT_CHARS
@@ -36,7 +29,6 @@ export function buildPrompt(title: string, content: string): string {
   );
 }
 
-/** Подрезает пересказ до верхней границы — на случай слишком длинного ответа. */
 export function clampSummary(text: string): string {
   return text.length > MAX_SUMMARY_CHARS
     ? text.slice(0, MAX_SUMMARY_CHARS - 1) + "…"

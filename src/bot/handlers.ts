@@ -10,9 +10,11 @@ import {
 import { addUrl, hasUrl } from "../database/jsonStore.js";
 import {
   FIND_ARTICLE_BUTTON,
+  LINK_POST_BUTTON,
   mainKeyboard,
   articleKeyboard,
   modelKeyboard,
+  linkModelKeyboard,
   CB,
 } from "./keyboards.js";
 import { escapeHtml, htmlToPlain, renderSummary } from "./format.js";
@@ -32,14 +34,10 @@ const TOPICS = [
 
 const TG_CAPTION_LIMIT = 1024;
 
-// Состояние диалога на чат. Хранится в памяти: для личного бота этого
-// достаточно — при перезапуске процесса состояние просто сбрасывается,
-// и пользователь начинает поиск заново.
 interface ChatState {
-  // Сейчас предложенная, но ещё не обработанная статья.
   current: SearchResult | null;
-  // URL'ы, уже предложенные в этой сессии, — чтобы не показывать повторно.
   seen: Set<string>;
+  awaitingLink: boolean;
 }
 
 const chatStates = new Map<number, ChatState>();
@@ -47,7 +45,7 @@ const chatStates = new Map<number, ChatState>();
 function stateFor(chatId: number): ChatState {
   let state = chatStates.get(chatId);
   if (!state) {
-    state = { current: null, seen: new Set() };
+    state = { current: null, seen: new Set(), awaitingLink: false };
     chatStates.set(chatId, state);
   }
   return state;
@@ -68,14 +66,15 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.command("start", async (ctx) => {
+    if (ctx.chat) stateFor(ctx.chat.id).awaitingLink = false;
     await ctx.reply(
-      "Привет! Нажми «Найти статью» — поищу свежую статью по фронтенду, " +
-        "а ты выберешь, какой моделью сделать пост.",
+      "Привет! «Найти статью» — поищу свежую статью по фронтенду. " +
+        "«Пост по ссылке» — пришли свой URL, и я сделаю пост по нему. " +
+        "Модель для генерации ты выбираешь сам.",
       { reply_markup: mainKeyboard },
     );
   });
 
-  // Поиск статьи: команда, текстовая кнопка и inline-кнопка «искать новую».
   bot.command("find", proposeArticle);
   bot.hears(FIND_ARTICLE_BUTTON, proposeArticle);
   bot.callbackQuery(CB.searchNew, async (ctx) => {
@@ -84,20 +83,55 @@ export function registerHandlers(bot: Bot): void {
     await proposeArticle(ctx);
   });
 
-  // Открыть выбор модели / вернуться к карточке статьи.
+  bot.hears(LINK_POST_BUTTON, askForLink);
+
   bot.callbackQuery(CB.generate, showModelMenu);
   bot.callbackQuery(CB.back, backToArticle);
 
-  // Генерация поста выбранной моделью.
   bot.callbackQuery(CB.genGrok, (ctx) => generatePost(ctx, "grok"));
   bot.callbackQuery(CB.genGemini, (ctx) => generatePost(ctx, "gemini"));
+
+  bot.on("message:text", handleText);
 }
 
-// Шаг 1: ищем статью по случайной теме и предлагаем её карточкой с кнопками.
-async function proposeArticle(ctx: Context): Promise<void> {
+const URL_RE = /https?:\/\/[^\s]+/i;
+
+async function askForLink(ctx: Context): Promise<void> {
+  if (!ctx.chat) return;
+  stateFor(ctx.chat.id).awaitingLink = true;
+  await ctx.reply("Пришли ссылку на статью — сделаю по ней пост.");
+}
+
+async function handleText(ctx: Context): Promise<void> {
   const chatId = ctx.chat?.id;
   if (chatId === undefined) return;
   const state = stateFor(chatId);
+  if (!state.awaitingLink) return;
+
+  const match = ctx.message?.text?.match(URL_RE);
+  if (!match) {
+    await ctx.reply(
+      "Это не похоже на ссылку. Пришли URL вида https://… — или нажми «Найти статью».",
+    );
+    return;
+  }
+
+  const url = match[0].replace(/[.,;:!?)\]]+$/, "");
+  state.awaitingLink = false;
+  state.current = { url, title: url };
+
+  await ctx.reply(`🔗 Ссылка принята:\n${url}\n\nЧем сгенерировать пост?`, {
+    link_preview_options: { is_disabled: true },
+    reply_markup: linkModelKeyboard,
+  });
+}
+
+async function proposeArticle(ctx: Context): Promise<void> {
+  const chatId = ctx.chat?.id;
+  if (chatId === undefined) return;
+
+  const state = stateFor(chatId);
+  state.awaitingLink = false;
 
   const topic = pickRandomTopic();
   await ctx.reply(`🔎 Ищу статьи: ${topic}…`);
@@ -115,7 +149,6 @@ async function proposeArticle(ctx: Context): Promise<void> {
     return;
   }
 
-  // Берём первую статью, которой нет ни в истории, ни среди уже показанных.
   let chosen: SearchResult | null = null;
   for (const r of results) {
     if (state.seen.has(r.url)) continue;
@@ -124,9 +157,7 @@ async function proposeArticle(ctx: Context): Promise<void> {
     break;
   }
   if (!chosen) {
-    await ctx.reply(
-      "Новых статей по этой теме не нашлось — попробуй ещё раз.",
-    );
+    await ctx.reply("Новых статей по этой теме не нашлось — попробуй ещё раз.");
     return;
   }
 
@@ -140,7 +171,6 @@ async function proposeArticle(ctx: Context): Promise<void> {
   });
 }
 
-// Шаг 2: пользователь нажал «Сгенерировать пост» — показываем выбор модели.
 async function showModelMenu(ctx: Context): Promise<void> {
   const state = ctx.chat ? stateFor(ctx.chat.id) : null;
   if (!state?.current) {
@@ -155,22 +185,17 @@ async function showModelMenu(ctx: Context): Promise<void> {
   try {
     await ctx.editMessageReplyMarkup({ reply_markup: modelKeyboard });
   } catch {
-    // Если карточку нельзя отредактировать — присылаем выбор отдельным сообщением.
     await ctx.reply("Чем сгенерировать пост?", { reply_markup: modelKeyboard });
   }
 }
 
-// Возврат от выбора модели к кнопкам карточки статьи.
 async function backToArticle(ctx: Context): Promise<void> {
   await ctx.answerCallbackQuery();
   try {
     await ctx.editMessageReplyMarkup({ reply_markup: articleKeyboard });
-  } catch {
-    /* карточку уже не отредактировать — не критично */
-  }
+  } catch {}
 }
 
-// Шаг 3: парсим выбранную статью, делаем выжимку моделью и отправляем результат.
 async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
   const state = ctx.chat ? stateFor(ctx.chat.id) : null;
   const chosen = state?.current ?? null;
@@ -183,7 +208,6 @@ async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
   }
 
   await ctx.answerCallbackQuery();
-  // Убираем кнопки с карточки, чтобы по ней не нажали повторно.
   await ctx.editMessageReplyMarkup().catch(() => {});
 
   const label = PROVIDER_LABELS[provider];
@@ -208,9 +232,6 @@ async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
     return;
   }
 
-  // Подробная выжимка не помещается в подпись к фото (лимит 1024),
-  // поэтому фото идёт с короткой подписью, а сам пересказ — отдельными
-  // сообщениями (лимит 4096 на сообщение).
   const photoCaption = buildPhotoCaption(article.title, article.url);
 
   try {
@@ -223,7 +244,6 @@ async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
       await ctx.reply(photoCaption, { parse_mode: "HTML" });
     }
   } catch {
-    // Картинка может оказаться битой/слишком большой — отправим текстом
     await ctx.reply(photoCaption, { parse_mode: "HTML" });
   }
 
@@ -232,7 +252,6 @@ async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
     try {
       await ctx.reply(message, { parse_mode: "HTML" });
     } catch {
-      // Если Telegram отверг разметку — отправляем без неё
       await ctx.reply(htmlToPlain(message));
     }
   }
@@ -246,7 +265,6 @@ async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
   );
 }
 
-// Карточка предложенной статьи: заголовок, описание и ссылка.
 function buildArticleCard(article: SearchResult): string {
   const parts = [`<b>${escapeHtml(article.title)}</b>`];
   if (article.description) {
