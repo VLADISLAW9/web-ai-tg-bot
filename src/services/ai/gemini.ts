@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const MODEL_NAME = "gemini-2.5-flash";
 
-export async function generateWithGemini(prompt: string): Promise<string> {
+export async function generateWithGemini(prompt: string) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("Gemini: GEMINI_API_KEY is not set");

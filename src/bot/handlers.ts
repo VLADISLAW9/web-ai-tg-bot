@@ -42,7 +42,7 @@ interface ChatState {
 
 const chatStates = new Map<number, ChatState>();
 
-function stateFor(chatId: number): ChatState {
+function stateFor(chatId: number) {
   let state = chatStates.get(chatId);
   if (!state) {
     state = { current: null, seen: new Set(), awaitingLink: false };
@@ -51,16 +51,16 @@ function stateFor(chatId: number): ChatState {
   return state;
 }
 
-function pickRandomTopic(): string {
+function pickRandomTopic() {
   const idx = Math.floor(Math.random() * TOPICS.length);
   return TOPICS[idx] ?? TOPICS[0];
 }
 
-function isAdmin(ctx: Context): boolean {
+function isAdmin(ctx: Context) {
   return ctx.from?.id === config.adminTelegramId;
 }
 
-export function registerHandlers(bot: Bot): void {
+export function registerHandlers(bot: Bot) {
   bot.use(async (ctx, next) => {
     if (isAdmin(ctx)) await next();
   });
@@ -96,13 +96,13 @@ export function registerHandlers(bot: Bot): void {
 
 const URL_RE = /https?:\/\/[^\s]+/i;
 
-async function askForLink(ctx: Context): Promise<void> {
+async function askForLink(ctx: Context) {
   if (!ctx.chat) return;
   stateFor(ctx.chat.id).awaitingLink = true;
   await ctx.reply("Пришли ссылку на статью — сделаю по ней пост.");
 }
 
-async function handleText(ctx: Context): Promise<void> {
+async function handleText(ctx: Context) {
   const chatId = ctx.chat?.id;
   if (chatId === undefined) return;
   const state = stateFor(chatId);
@@ -126,7 +126,7 @@ async function handleText(ctx: Context): Promise<void> {
   });
 }
 
-async function proposeArticle(ctx: Context): Promise<void> {
+async function proposeArticle(ctx: Context) {
   const chatId = ctx.chat?.id;
   if (chatId === undefined) return;
 
@@ -171,7 +171,7 @@ async function proposeArticle(ctx: Context): Promise<void> {
   });
 }
 
-async function showModelMenu(ctx: Context): Promise<void> {
+async function showModelMenu(ctx: Context) {
   const state = ctx.chat ? stateFor(ctx.chat.id) : null;
   if (!state?.current) {
     await ctx.answerCallbackQuery({
@@ -189,14 +189,14 @@ async function showModelMenu(ctx: Context): Promise<void> {
   }
 }
 
-async function backToArticle(ctx: Context): Promise<void> {
+async function backToArticle(ctx: Context) {
   await ctx.answerCallbackQuery();
   try {
     await ctx.editMessageReplyMarkup({ reply_markup: articleKeyboard });
   } catch {}
 }
 
-async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
+async function generatePost(ctx: Context, provider: AiProvider) {
   const state = ctx.chat ? stateFor(ctx.chat.id) : null;
   const chosen = state?.current ?? null;
   if (!state || !chosen) {
@@ -265,7 +265,7 @@ async function generatePost(ctx: Context, provider: AiProvider): Promise<void> {
   );
 }
 
-function buildArticleCard(article: SearchResult): string {
+function buildArticleCard(article: SearchResult) {
   const parts = [`<b>${escapeHtml(article.title)}</b>`];
   if (article.description) {
     parts.push(escapeHtml(article.description));
@@ -276,7 +276,7 @@ function buildArticleCard(article: SearchResult): string {
   return parts.join("\n\n");
 }
 
-function buildPhotoCaption(title: string, url: string): string {
+function buildPhotoCaption(title: string, url: string) {
   const caption = `<b>${escapeHtml(title)}</b>\n\n<a href="${escapeHtml(url)}">Читать оригинал →</a>`;
   return caption.length > TG_CAPTION_LIMIT
     ? caption.slice(0, TG_CAPTION_LIMIT - 1) + "…"

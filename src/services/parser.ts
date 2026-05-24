@@ -8,7 +8,7 @@ export interface ParsedArticle {
   imageUrl: string | null;
 }
 
-export async function parseArticle(url: string): Promise<ParsedArticle> {
+export async function parseArticle(url: string) {
   const apiKey = process.env.JINA_API_KEY;
 
   const headers: Record<string, string> = {
@@ -47,7 +47,7 @@ export async function parseArticle(url: string): Promise<ParsedArticle> {
   return extractArticle(url, json);
 }
 
-function extractArticle(requestedUrl: string, json: unknown): ParsedArticle {
+function extractArticle(requestedUrl: string, json: unknown) {
   if (typeof json !== "object" || json === null) {
     throw new Error("Jina Reader: invalid response (not an object)");
   }
@@ -69,13 +69,14 @@ function extractArticle(requestedUrl: string, json: unknown): ParsedArticle {
 
   return {
     url: typeof url === "string" ? url : requestedUrl,
-    title: typeof title === "string" && title.length > 0 ? title : "Без заголовка",
+    title:
+      typeof title === "string" && title.length > 0 ? title : "Без заголовка",
     content,
     imageUrl: pickMainImage(images, content),
   };
 }
 
-function pickMainImage(images: unknown, content: string): string | null {
+function pickMainImage(images: unknown, content: string) {
   if (images && typeof images === "object") {
     for (const value of Object.values(images as Record<string, unknown>)) {
       if (typeof value === "string" && /^https?:\/\//.test(value)) return value;

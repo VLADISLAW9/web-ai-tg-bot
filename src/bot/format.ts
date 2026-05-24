@@ -1,11 +1,11 @@
 const MAX_MESSAGE_LEN = 3900;
 const FENCE_RE = /```([a-zA-Z0-9+#.-]*)[ \t]*\r?\n?([\s\S]*?)```/g;
 
-export function escapeHtml(s: string): string {
+export function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function inlineToHtml(segment: string): string {
+function inlineToHtml(segment: string) {
   let s = escapeHtml(segment);
 
   s = s.replace(/^\s{0,3}#{1,6}\s+(.+?)\s*#*$/gm, "<b>$1</b>");
@@ -17,13 +17,13 @@ function inlineToHtml(segment: string): string {
   return s.trim();
 }
 
-function codeToHtml(lang: string, code: string): string {
+function codeToHtml(lang: string, code: string) {
   const body = escapeHtml(code.replace(/^\r?\n/, "").replace(/\s+$/, ""));
   const cls = lang ? ` class="language-${lang.toLowerCase()}"` : "";
   return `<pre><code${cls}>${body}</code></pre>`;
 }
 
-function toHtmlBlocks(md: string): string[] {
+function toHtmlBlocks(md: string) {
   const blocks: string[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
@@ -37,14 +37,14 @@ function toHtmlBlocks(md: string): string[] {
   return blocks;
 }
 
-function pushTextBlocks(blocks: string[], text: string): void {
+function pushTextBlocks(blocks: string[], text: string) {
   for (const para of text.split(/\n{2,}/)) {
     const html = inlineToHtml(para);
     if (html.length > 0) blocks.push(html);
   }
 }
 
-function sliceByLines(text: string, budget: number): string[] {
+function sliceByLines(text: string, budget: number) {
   const out: string[] = [];
   let cur = "";
   for (const line of text.split("\n")) {
@@ -69,7 +69,7 @@ function sliceByLines(text: string, budget: number): string[] {
   return out.length > 0 ? out : [""];
 }
 
-function hardSplit(block: string): string[] {
+function hardSplit(block: string) {
   const pre = block.match(/^<pre><code([^>]*)>([\s\S]*)<\/code><\/pre>$/);
   if (pre) {
     const attrs = pre[1] ?? "";
@@ -82,7 +82,7 @@ function hardSplit(block: string): string[] {
   return sliceByLines(block, MAX_MESSAGE_LEN);
 }
 
-function groupBlocks(blocks: string[]): string[] {
+function groupBlocks(blocks: string[]) {
   const messages: string[] = [];
   let cur = "";
   for (const block of blocks) {
@@ -105,11 +105,11 @@ function groupBlocks(blocks: string[]): string[] {
   return messages.filter((m) => m.trim().length > 0);
 }
 
-export function renderSummary(md: string): string[] {
+export function renderSummary(md: string) {
   return groupBlocks(toHtmlBlocks(md));
 }
 
-export function htmlToPlain(html: string): string {
+export function htmlToPlain(html: string) {
   return html
     .replace(/<\/?(b|i|u|s|code|pre)(\s[^>]*)?>/g, "")
     .replace(/<a href="[^"]*">/g, "")

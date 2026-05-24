@@ -17,7 +17,7 @@ const PROMPT_TEMPLATE = `Ты — опытный фронтенд-разрабо
 Текст статьи:
 {{CONTENT}}`;
 
-export function buildPrompt(title: string, content: string): string {
+export function buildPrompt(title: string, content: string) {
   const trimmedContent =
     content.length > MAX_INPUT_CHARS
       ? content.slice(0, MAX_INPUT_CHARS) + "\n…(обрезано)"
@@ -29,7 +29,7 @@ export function buildPrompt(title: string, content: string): string {
   );
 }
 
-export function clampSummary(text: string): string {
+export function clampSummary(text: string) {
   return text.length > MAX_SUMMARY_CHARS
     ? text.slice(0, MAX_SUMMARY_CHARS - 1) + "…"
     : text;

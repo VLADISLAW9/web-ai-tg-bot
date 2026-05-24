@@ -7,10 +7,7 @@ export interface SearchResult {
   description?: string;
 }
 
-export async function searchArticles(
-  query: string,
-  limit = 5,
-): Promise<SearchResult[]> {
+export async function searchArticles(query: string, limit = 5) {
   const apiKey = process.env.JINA_API_KEY;
   if (!apiKey) {
     throw new Error("Jina Search: JINA_API_KEY is not set");
@@ -53,7 +50,7 @@ export async function searchArticles(
   return extractResults(json).slice(0, limit);
 }
 
-function extractResults(json: unknown): SearchResult[] {
+function extractResults(json: unknown) {
   if (typeof json !== "object" || json === null) return [];
   const data = (json as { data?: unknown }).data;
   if (!Array.isArray(data)) return [];

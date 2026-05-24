@@ -2,7 +2,7 @@ const ENDPOINT = "https://api.x.ai/v1/chat/completions";
 const MODEL_NAME = "grok-4-fast-reasoning";
 const TIMEOUT_MS = 60_000;
 
-export async function generateWithGrok(prompt: string): Promise<string> {
+export async function generateWithGrok(prompt: string) {
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
     throw new Error("Grok: XAI_API_KEY is not set");
@@ -46,7 +46,7 @@ export async function generateWithGrok(prompt: string): Promise<string> {
   return extractText(json);
 }
 
-function extractText(json: unknown): string {
+function extractText(json: unknown) {
   if (typeof json !== "object" || json === null) {
     throw new Error("Grok: invalid response (not an object)");
   }

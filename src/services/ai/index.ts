@@ -13,7 +13,7 @@ export async function summarizeArticle(
   provider: AiProvider,
   title: string,
   content: string,
-): Promise<string> {
+) {
   const prompt = buildPrompt(title, content);
 
   const text =

@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 const HISTORY_PATH = resolve(process.cwd(), "data", "history.json");
 
-export async function initHistory(): Promise<void> {
+export async function initHistory() {
   try {
     await readFile(HISTORY_PATH, "utf-8");
   } catch (err) {
@@ -13,7 +13,7 @@ export async function initHistory(): Promise<void> {
   }
 }
 
-export async function readHistory(): Promise<string[]> {
+export async function readHistory() {
   const raw = await readFile(HISTORY_PATH, "utf-8");
   const parsed: unknown = JSON.parse(raw);
   if (
@@ -25,12 +25,12 @@ export async function readHistory(): Promise<string[]> {
   return parsed;
 }
 
-export async function hasUrl(url: string): Promise<boolean> {
+export async function hasUrl(url: string) {
   const history = await readHistory();
   return history.includes(url);
 }
 
-export async function addUrl(url: string): Promise<void> {
+export async function addUrl(url: string) {
   const history = await readHistory();
   if (history.includes(url)) return;
   history.push(url);

@@ -3,7 +3,7 @@ import { Bot } from "grammy";
 import { initHistory } from "./database/jsonStore.js";
 import { registerHandlers } from "./bot/handlers.js";
 
-async function main(): Promise<void> {
+async function main() {
   await initHistory();
 
   const bot = new Bot(config.botToken);

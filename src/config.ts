@@ -1,7 +1,7 @@
 import "dotenv/config";
 import process from "process";
 
-function required(name: string): string {
+function required(name: string) {
   const value = process.env[name];
 
   if (!value || value.trim().length === 0) {
@@ -11,7 +11,7 @@ function required(name: string): string {
   return value;
 }
 
-function requiredInt(name: string): number {
+function requiredInt(name: string) {
   const raw = required(name);
   const n = Number(raw);
 
